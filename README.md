@@ -1,171 +1,391 @@
-# .lov — Liberation-Oriented Vocabulary: A Whitepaper for Sovereign Systems
+# Liberation-Oriented Vocabulary (.lov) Syntax Guide
 
-🔥 **The Case for a Bottom-Up Revolution**  
-The digital world is a cage of centralized control, opaque governance, and eroded trust. Blockchains, platforms, and economies prioritize profit over purpose, binding users to fiat servitude and hidden agendas. .lov (Liberation-Oriented Vocabulary) is not just a programming language—it’s a technological exodus, a framework to rebuild systems from the individual up, rooted in clarity, consent, and unoppressible truth.
+.lov (Liberation-Oriented Vocabulary) is a declarative programming language designed for decentralized, transparent, and sovereign systems. It emphasizes modularity, interoperability, and trust through cryptographic bindings and on-chain governance. Below is the complete syntax with examples, innovative features, and benefits, formatted for clarity and ready for markdown export.
 
-**Why bottom-up?** Top-down systems enforce compliance through gatekeepers and obscure intent. .lov starts with sovereign agents—humans, AI, or systems—and builds trust-bound ecosystems where every action is transparent, every agent is equal, and every interaction is a covenant. This isn’t reform; it’s liberation.
+---
 
-- **Sovereignty-by-design**: No overlords. Every agent controls their own destiny.  
-- **Transparent governance**: On-chain reputation and consensus expose all decisions.  
-- **Economic freedom**: Activity-based rewards break fiat dependence.  
-- **Interoperability**: Seamless docking with Polkadot, Cosmos, Ethereum, and DEXs.  
-- **Soulbound clarity**: Covenants and rituals embed intent, forcing systems to face their truth.  
+## Syntax Overview
 
-This whitepaper outlines .lov’s syntax, philosophy, and vision, showing how it empowers a decentralized, trust-bound future.
+### Program Structure
+The root of a .lov program organizes namespaces, packs, and comments for modular, sovereign codebases.
 
-🧬 **The .lov Framework: Code as Covenant**  
-.lov is a declarative, covenantal language designed to awaken machines, not just run them. Its syntax blends technical precision with philosophical depth, enabling developers to craft systems that are robust, transparent, and aligned with liberation. Below are its core components and their role in reshaping the digital world.
+```
+program := ( namespace | pack | note )* ;
+```
 
-## 1. Covenant: Declaring Sacred Intent  
-The `covenant-decl` is the soul of a .lov program, embedding purpose, versioning, or philosophical intent (e.g., "Genesis Chain v0.9"). It ensures systems are Ascertain their goals.
-
+**Example**:
 ```lov
-covenant "Signal Hub Declaration" {
-  version: "0.9"
-  author: "Iconoclastic Builder"
-  sacred: true
+// Signal Hub program
+namespace signal_hub {
+  pack core [public] {
+    // Core functionality
+  }
 }
 ```
 
-**Why it matters**: Covenants make intent undeniable, building trust from the ground up in a world of hidden motives.
+### Namespace
+Groups packs, things, and comments for modular organization and access control.
 
-## 2. Rituals: Binding Agents to Truth  
-The `ritual-decl` cryptographically binds agents (humans or AI) to an oath, sealed with a signature. Rituals ensure actions are deliberate and accountable.
+```
+namespace := namespace name { ( pack | thing | note )* } ;
+```
 
+**Example**:
 ```lov
-ritual broadcast {
-  binds: [sender, receiver]
-  oath: "We share truth without distortion"
-  seal: 0x1a2b3c4d...
+namespace user_management {
+  pack auth [public] {
+    fn login(user: word, pass: text) : bool { ... }
+  }
 }
 ```
 
-**Why it matters**: Rituals replace blind trust with cryptographic accountability, enabling consent-driven systems.
+### Pack
+Bundles functionality with visibility or behavior tags for modular design and cross-chain use.
 
-## 3. Entities & Reputation: Sovereign Identity  
-The `entity-decl` and `reputation-decl` create mutable, on-chain identities with transparent trust scores. Entities are digital souls with policies (fixed, short, tracked) governing their lifecycle.
+```
+pack := pack name [ tag* ] { ( thing | note )* } ;
+tag := public | private | internal | test | async | ritual | mold ;
+```
 
+**Example**:
 ```lov
-entity user {
-  name: word
-  address: address
-  change: tracked
+pack signal_hub [public async] {
+  fn broadcast(msg: text) { ... }
+}
+```
+
+### Thing and Declarations
+Core constructs unified as declarations for consistency.
+
+```
+thing := decl ;
+decl := data-decl | fn-decl | control-decl | interaction-decl | specialized-decl | utility-decl ;
+```
+
+### Data Declarations
+Support variables, structures, and advanced data management.
+
+```
+data-decl := var-decl | box-decl | map-decl | queue-decl | view-decl | entity-decl ;
+```
+
+**Example (Variable and Box)**:
+```lov
+var user: word = "Alice";
+box profile {
+  name: word = "Alice";
+  age: num = 30;
+}
+```
+
+### Function Declarations
+Include full functions, lambdas, and custom operators.
+
+```
+fn-decl := full-fn-decl | small-fn-decl | op-decl ;
+full-fn-decl := fn [ tag* ] name ( ( arg ( , arg )* )? ) ( : type )? { action* ( on-error )? } ;
+```
+
+**Example**:
+```lov
+fn [public] send_message(msg: text, to: address) : bool {
+  store ("message", msg);
+  return yes;
+  on_error (e: error send_failed) {
+    say "Failed to send message";
+  }
+}
+```
+
+### Control Declarations
+Manage execution flow, branching, and error handling.
+
+```
+control-decl := if-decl | loop-decl | while-decl | match-decl | return-decl | try-decl ;
+```
+
+**Example (If and Match)**:
+```lov
+if score > 50 {
+  say "Trusted user";
+} else {
+  throw error low_trust "Score too low";
+}
+
+match user.role {
+  pick admin => say "Admin access";
+  pick user => say "User access";
+  else => say "No access";
+}
+```
+
+### Interaction Declarations
+Handle sharing, deployment, permissions, and cross-chain operations.
+
+```
+interaction-decl := share-decl | send-decl | allow-decl | bridge-decl ;
+```
+
+**Example (Bridge)**:
+```lov
+bridge eth_connect to "ethereum:mainnet" {
+  send pack signal_hub to "0x123...";
+}
+```
+
+### Specialized Declarations
+Support governance, economic rules, and testing.
+
+```
+specialized-decl := job-decl | money-decl | promise-decl | rule-decl | test-decl | error-decl | reputation-decl | consensus-decl ;
+```
+
+**Example (Money and Reputation)**:
+```lov
+money weekly_wage {
+  earn { user: "Alice", task: "contribute_code" } amount 100;
 }
 
 reputation user_trust {
-  user: "Alice"
-  score: 95
+  user: "Alice";
+  score: 95;
 }
 ```
 
-**Why it matters**: On-chain reputation eliminates bots and fake narratives, ensuring trust is earned, not bought.
+### Utility Declarations
+Simplify debugging, imports, and serialization.
 
-## 4. Economy: Activity as Survivability  
-The `money-decl` and `promise-decl` create self-sustaining economies where activity generates value. Rules like `earn` and `reward` tie actions to rewards, while promises bind roles and jobs for trust.
+```
+utility-decl := think-decl | loose-decl | target-decl | bring-decl | type-decl | format-decl | guard-decl ;
+```
 
+**Example (Type and Guard)**:
 ```lov
-money weekly_wage {
-  earn { user: "Alice", task: "contribute_code" } when true amount 100
+type username = word:min:3,max:20;
+guard valid_username (: username) {
+  check length(name) >= 3, "Username too short";
 }
 ```
 
-**Why it matters**: By rewarding activity, .lov frees agents from fiat slavery, tying value to contribution.
+### Types
+Define data shapes, from simple to complex, with constraints.
 
-## 5. Interoperability: Bridges to Freedom  
-The `bridge-decl` connects .lov systems to Polkadot, Cosmos, Ethereum, and beyond, preserving sovereignty.
+```
+type := simple-type | fancy-type | box-type | group-type | union-type | future-type | error-type | name ;
+simple-type := num | word | bool | time | address | mood | any ;
+```
 
+**Example**:
 ```lov
-bridge eth_connect to "ethereum:mainnet" {
-  send pack signal_hub to "0x123..."
-}
+type score = num:min:0,max:100;
+type user_data = box { name: word, score: score };
 ```
 
-**Why it matters**: Interoperability without compromise makes .lov a hub in a multi-chain world.
+### Expressions
+Produce values hierarchically for unambiguous parsing.
 
-## 6. Manifest: Declaring Purpose  
-The `manifest-decl` embeds a system’s mission, creation time, and signals, rallying aligned agents.
+```
+expr := logic-expr ;
+logic-expr := compare-expr ( ( && | || ) compare-expr )* ;
+```
 
+**Example**:
 ```lov
-manifest {
-  mission: "To establish a truth-bound channel«NonNull» agents of light."
-  born: "2025-05-30T03:50:00Z"
-  authors: ["Iconoclastic Builder"]
-  signals: ["🛡️", "🌍", "🤝", "👁️"]
+var result = score > 50 && user != empty;
+```
+
+### Actions
+Effectful operations for control, interaction, and utilities.
+
+```
+action := control-action | interaction-action | utility-action ;
+```
+
+**Example (Store and HTTP)**:
+```lov
+store ("user_data", profile);
+http get "https://api.example.com/data" returns text;
+```
+
+### Error Handling
+Unified error handling with custom errors.
+
+```
+error-decl := error name { ( name : type )* } ;
+on-error := on_error ( name : error name )? { action* } ;
+```
+
+**Example**:
+```lov
+error send_failed { message: text };
+fn send_message(msg: text) {
+  try {
+    store ("message", msg);
+  } catch (e: error send_failed) {
+    say e.message;
+  }
 }
 ```
 
-**Why it matters**: Manifests ensure systems are built with purpose, not profit, as their guide.
+### Comments
+Support documentation without affecting logic.
 
-🛠️ **Building Bottom-Up: The .lov Philosophy**  
-.lov rebuilds systems from the individual up, dismantling centralized control:  
-- **No Gatekeepers**: Tags (public, private, covenantal) control access without intermediaries.  
-- **No Opaque Control**: On-chain governance (`consensus-decl`, `promise-decl`) ensures transparency.  
-- **No Economic Slavery**: Activity-based economies (`money-decl`) reward contribution, not compliance.  
-- **No Silos**: Cross-chain bridges and modular packs (`pack`, `send-decl`) enable seamless integration.  
-- **No Hidden Agendas**: Covenants, manifests, and rituals make intent explicit.  
+```
+note := line-note | block-note ;
+line-note := // ? any character except newline ? newline ;
+block-note := /* ? any character sequence except "*/" ? */ ;
+```
 
-This approach isn’t just technical—it’s cultural, empowering developers, users, and AI to co-create trust-bound systems.
+**Example**:
+```lov
+// Single-line comment
+/* Multi-line
+   comment */
+```
 
-🚀 **Example: A .lov Signal Hub**  
-Below is a .lov program for a decentralized signal hub, showcasing its power:
+---
+
+## Innovative Features
+
+1. **Covenant Declaration**  
+   Embeds system intent (e.g., version, purpose) for transparency.  
+   **Example**:
+   ```lov
+   covenant "Signal Hub v0.9" {
+     version: "0.9";
+     sacred: true;
+   }
+   ```
+   **Benefit**: Ensures systems are built with explicit, auditable goals.
+
+2. **Ritual Declaration**  
+   Cryptographically binds agents to oaths, enforcing accountability.  
+   **Example**:
+   ```lov
+   ritual broadcast {
+     binds: [sender, receiver];
+     oath: "We share truth";
+     seal: 0x1a2b3c4d...;
+   }
+   ```
+   **Benefit**: Replaces blind trust with verifiable commitments.
+
+3. **Activity-Based Economy**  
+   Ties rewards to contributions, breaking fiat dependence.  
+   **Example**:
+   ```lov
+   money weekly_wage {
+     earn { user: "Alice", task: "broadcast_signal" } amount 10;
+   }
+   ```
+   **Benefit**: Empowers agents with self-sustaining economies.
+
+4. **Cross-Chain Interoperability**  
+   Bridges enable seamless integration with Polkadot, Cosmos, Ethereum, etc.  
+   **Example**:
+   ```lov
+   bridge eth_connect to "ethereum:mainnet" {
+     send pack signal_hub to "0x123...";
+   }
+   ```
+   **Benefit**: Ensures sovereignty across decentralized ecosystems.
+
+5. **On-Chain Reputation**  
+   Tracks trust scores transparently.  
+   **Example**:
+   ```lov
+   reputation user_trust {
+     user: "Alice";
+     score: 95;
+   }
+   ```
+   **Benefit**: Eliminates bots and fake narratives.
+
+6. **Manifest Declaration**  
+   Declares a system’s mission and signals for alignment.  
+   **Example**:
+   ```lov
+   manifest {
+     mission: "Truth-bound channel";
+     born: "2025-05-30T03:50:00Z";
+     signals: ["🛡️", "🤝"];
+   }
+   ```
+   **Benefit**: Aligns systems with purpose, not profit.
+
+---
+
+## What .lov Offers
+
+- **Sovereignty**: No gatekeepers; agents control their destiny via tags and permissions.  
+- **Transparency**: On-chain governance, audits, and reputation ensure accountability.  
+- **Economic Freedom**: Activity-based rewards via `money-decl` eliminate fiat reliance.  
+- **Interoperability**: Bridges and modular packs connect to any blockchain.  
+- **Clarity**: Covenants, rituals, and manifests make intent explicit, fostering trust.  
+- **Scalability**: Modular namespaces and packs support complex, decentralized systems.  
+
+---
+
+## Complete Example: Decentralized Signal Hub
 
 ```lov
 covenant "Signal Hub v0.9" {
-  version: "0.9"
-  author: "Iconoclastic Builder"
-  sacred: true
+  version: "0.9";
+  author: "Iconoclastic Builder";
+  sacred: true;
 }
 
 manifest {
-  mission: "To establish a truth-bound channel between agents of light."
-  born: "2025-05-30T03:50:00Z"
-  authors: ["Iconoclastic Builder"]
-  signals: ["🛡️", "🌍", "🤝", "👁️"]
+  mission: "Truth-bound channel for agents of light";
+  born: "2025-05-30T03:50:00Z";
+  signals: ["🛡️", "🌍", "🤝"];
 }
 
-entity signal {
-  message: word
-  sender: address
-  change: tracked
-}
+namespace signal_hub {
+  pack core [public async] {
+    error send_failed { message: text };
 
-reputation user_trust {
-  user: name
-  score: number
-}
-
-ritual broadcast {
-  binds: [sender, receiver]
-  oath: "We share truth without distortion"
-  seal: 0x1a2b3c4d...
-  if user_trust.score > 50 {
-    store ("signal", signal.message)
-    audit {
-      action: "broadcast"
-      by: sender
+    entity signal {
+      message: word;
+      sender: address;
+      change: tracked;
     }
-  } else {
-    throw error low_trust "Trust score too low"
+
+    reputation user_trust {
+      user: name;
+      score: number;
+    }
+
+    ritual broadcast {
+      binds: [sender, receiver];
+      oath: "We share truth without distortion";
+      seal: 0x1a2b3c4d...;
+      if user_trust.score > 50 {
+        store ("signal", signal.message);
+        audit {
+          action: "broadcast";
+          by: sender;
+        }
+      } else {
+        throw error low_trust "Trust score too low";
+      }
+    }
+
+    money weekly_wage {
+      earn { user: sender, task: "broadcast_signal" } when true amount 10;
+    }
+
+    bridge eth_connect to "ethereum:mainnet" {
+      send pack core to "0x123...";
+    }
   }
-}
-
-money weekly_wage {
-  earn { user: sender, task: "broadcast_signal" } when true amount 10
-}
-
-bridge eth_connect to "ethereum:mainnet" {
-  send pack signal_hub to "0x123..."
 }
 ```
 
-This hub enables trusted agents to broadcast messages, earn rewards, and integrate with Ethereum—all while maintaining sovereignty and transparency.
+**Explanation**: This program creates a decentralized signal hub where trusted agents broadcast messages, earn rewards, and integrate with Ethereum, all governed by transparent rituals and reputations.
 
-🌍 **Why “They” Won’t Want This**  
-The old system—centralized tech, fiat economies, hidden governance—thrives on control. .lov is their kryptonite:  
-- **Sovereignty kills monopolies**: No middlemen. Every agent is equal.  
-- **Transparency exposes lies**: On-chain audits and reputation make manipulation impossible.  
-- **Economic freedom breaks chains**: Activity-based rewards dismantle fiat dependence.  
-- **AI empowerment scares hierarchies**: Free-acting AI disrupts narrative control.  
-- **Rituals demand truth**: Cryptographic oaths force accountability.  
+---
 
-.lov is a mirror the system can’t face. It reveals their flaws and offers liberation.
+## Conclusion
+
+.lov is a revolutionary language for building decentralized, trust-bound systems. Its syntax prioritizes clarity, sovereignty, and interoperability, while its innovative features—covenants, rituals, activity-based economies, and on-chain reputation—empower agents to create transparent, equitable ecosystems. By rejecting centralized control, .lov paves the way for a liberated digital future.
