@@ -1,15 +1,23 @@
 class Environment {
   constructor(parent = null) {
-    this.bindings = new Map();
-    this.types = new Map();
-    this.parent = parent;
+    this.bindings = new Map(); // Stores variable bindings
+    this.types = new Map(); // Stores type definitions
+    this.parent = parent; // Reference to parent environment for scope chain
+    this.permissions = new Map(); // Stores access control permissions
+    this.eventListeners = new Map(); // Stores event listeners for view/subscribe
   }
 
   define(name, value) {
+    if (this.bindings.has(name)) {
+      throw new Error(`Variable ${name} already defined in this scope`);
+    }
     this.bindings.set(name, value);
   }
 
   defineType(name, type) {
+    if (this.types.has(name)) {
+      throw new Error(`Type ${name} already defined in this scope`);
+    }
     this.types.set(name, type);
   }
 
@@ -43,6 +51,74 @@ class Environment {
       return;
     }
     throw new Error(`Cannot assign to undefined variable ${name}`);
+  }
+
+  definePermission(name, permission, target) {
+    this.permissions.set(`${name}:${target}`, permission);
+  }
+
+  hasPermission(name, permission, target) {
+    return this.permissions.get(`${name}:${target}`) === permission;
+  }
+
+  registerEventListener(eventName, callback) {
+    this.eventListeners.set(eventName, callback);
+  }
+
+  triggerEvent(eventName, data) {
+    const listener = this.eventListeners.get(eventName);
+    if (listener) {
+      listener(data);
+    }
+  }
+
+  createChild() {
+    return new Environment(this);
+  }
+
+  validateType(value, typeNode) {
+    const typeInfo = this.getType(typeNode.value || typeNode.name || typeNode.type);
+    switch (typeInfo.kind || typeNode.type) {
+      case 'SimpleType':
+        if (typeInfo.value === 'num' && typeof value !== 'number') {
+          throw new Error(`Expected number, got ${typeof value}`);
+        }
+        if (typeInfo.value === 'word' && typeof value !== 'string') {
+          throw new Error(`Expected string, got ${typeof value}`);
+        }
+        if (typeInfo.value === 'bool' && typeof value !== 'boolean') {
+          throw new Error(`Expected boolean, got ${typeof value}`);
+        }
+        if (typeInfo.value === 'time' && !(value instanceof Date)) {
+          throw new Error(`Expected time, got ${typeof value}`);
+        }
+        if (typeInfo.value === 'address' && !/^(0x)?[0-9a-fA-F]+$/.test(value)) {
+          throw new Error(`Expected address, got ${value}`);
+        }
+        if (typeInfo.value === 'mood' && !['happy', 'sad', 'neutral'].includes(value)) {
+          throw new Error(`Expected mood, got ${value}`);
+        }
+        if (typeInfo.value === 'any') {
+          return true;
+        }
+        break;
+      case 'BoxType':
+        if (typeof value !== 'object' || value.type !== typeInfo.name) {
+          throw new Error(`Expected box of type ${typeInfo.name}, got ${value.type || typeof value}`);
+        }
+        for (const field of typeInfo.fields) {
+          if (!(field.name in value.value) && !field.defaultValue) {
+            throw new Error(`Missing field ${field.name} in box ${typeInfo.name}`);
+          }
+          if (field.name in value.value) {
+            this.validateType(value.value[field.name], field.type);
+          }
+        }
+        break;
+      default:
+        throw new Error(`Unsupported type: ${typeInfo.kind || typeNode.type}`);
+    }
+    return true;
   }
 }
 
