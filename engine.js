@@ -1,4 +1,8 @@
 const { Environment } = require('./interpreter');
+const axios = require('axios');
+const WebSocket = require('ws');
+const CryptoJS = require('crypto-js');
+const snarkjs = require('snarkjs');
 
 // Bytecode Instructions
 const OPCODES = {
@@ -37,6 +41,13 @@ const OPCODES = {
   SUBSCRIBE: 0x21, // Register event listener
   AUDIT: 0x22, // Log audit event
   HASH: 0x23, // Compute hash
+  HTTP: 0x24, // Perform HTTP request
+  SOCKET: 0x25, // WebSocket communication
+  CRYPTO: 0x26, // Encrypt/decrypt
+  ZK_PROOF: 0x27, // Zero-knowledge proof
+  VOTE: 0x28, // Cast vote
+  VERIFY: 0x29, // Verify proof
+  PROOF: 0x2A, // Generate proof
   HALT: 0xFF, // Stop execution
 };
 
@@ -51,6 +62,7 @@ class Engine {
     this.functions = new Map();
     this.eventListeners = new Map();
     this.asyncJobs = new Map();
+    this.sockets = new Map(); // Track WebSocket connections
   }
 
   // Compile AST to bytecode
@@ -231,11 +243,9 @@ class Engine {
 
   compileMapDecl(node) {
     const mapType = {
-      kind: 'MapType',
-      box: {
-        name: node.box.name,
-        fields: node.box.fields,
-      },
+      kind: 'DictType',
+      keyType: node.box.fields.find(f => f.name === 'key').type,
+      valueType: node.box.fields.find(f => f.name === 'value').type,
     };
     this.instructions.push({
       opcode: OPCODES.STORE,
@@ -718,7 +728,15 @@ class Engine {
   }
 
   compileGroupExpr(node) {
-    node.elements.forEach(elem => this.compileExpr(elem));
+    const values = [];
+    node.elements.forEach(elem => {
+      this.compileExpr(elem);
+      values.push(this.stack.pop());
+    });
+    this.instructions.push({
+      opcode: OPCODES.PUSH,
+      value: values,
+    });
   }
 
   compileSmallFnExpr(node) {
@@ -799,6 +817,27 @@ class Engine {
         break;
       case 'HashAction':
         this.compileHashAction(node);
+        break;
+      case 'HttpAction':
+        this.compileHttpAction(node);
+        break;
+      case 'SocketAction':
+        this.compileSocketAction(node);
+        break;
+      case 'CryptoAction':
+        this.compileCryptoAction(node);
+        break;
+      case 'ZkProofAction':
+        this.compileZkProofAction(node);
+        break;
+      case 'VoteAction':
+        this.compileVoteAction(node);
+        break;
+      case 'VerifyAction':
+        this.compileVerifyAction(node);
+        break;
+      case 'ProofAction':
+        this.compileProofAction(node);
         break;
       default:
         throw new Error(`Unsupported action type: ${node.type}`);
@@ -992,6 +1031,73 @@ class Engine {
     });
   }
 
+  compileHttpAction(node) {
+    this.compileExpr(node.url);
+    this.compileExpr(node.body || { type: 'Literal', value: null });
+    this.instructions.push({
+      opcode: OPCODES.HTTP,
+      method: node.method,
+      headers: node.headers,
+      name: node.name,
+    });
+  }
+
+  compileSocketAction(node) {
+    this.compileExpr(node.url);
+    this.compileExpr(node.message);
+    this.instructions.push({
+      opcode: OPCODES.SOCKET,
+      action: node.action,
+      name: node.name,
+    });
+  }
+
+  compileCryptoAction(node) {
+    this.compileExpr(node.data);
+    this.instructions.push({
+      opcode: OPCODES.CRYPTO,
+      operation: node.operation,
+      key: node.key,
+      name: node.name,
+    });
+  }
+
+  compileZkProofAction(node) {
+    this.compileExpr(node.input);
+    this.instructions.push({
+      opcode: OPCODES.ZK_PROOF,
+      circuit: node.circuit,
+      name: node.name,
+    });
+  }
+
+  compileVoteAction(node) {
+    this.compileExpr(node.choice);
+    this.instructions.push({
+      opcode: OPCODES.VOTE,
+      proposal: node.proposal,
+      voter: node.voter,
+    });
+  }
+
+  compileVerifyAction(node) {
+    this.compileExpr(node.proof);
+    this.instructions.push({
+      opcode: OPCODES.VERIFY,
+      circuit: node.circuit,
+      publicSignals: node.publicSignals,
+    });
+  }
+
+  compileProofAction(node) {
+    this.compileExpr(node.input);
+    this.instructions.push({
+      opcode: OPCODES.PROOF,
+      circuit: node.circuit,
+      name: node.name,
+    });
+  }
+
   // Execute bytecode
   async execute(instructions) {
     this.instructions = instructions;
@@ -1024,7 +1130,7 @@ class Engine {
           this.environment.define(instruction.value, { type: 'Namespace', env: instruction.env });
         } else if (instruction.tags) {
           this.environment.define(instruction.value, { type: 'Pack', tags: instruction.tags, env: instruction.env });
-        } else if (instruction.value.type === 'Destructure') {
+        } else if (instruction.value && instruction.value.type === 'Destructure') {
           const arr = this.stack.pop();
           if (!Array.isArray(arr)) {
             throw new Error(`Expected array for destructuring, got ${typeof arr}`);
@@ -1161,7 +1267,130 @@ class Engine {
         break;
       case OPCODES.HASH:
         const hashValue = this.stack.pop();
-        this.environment.define(instruction.name, `hash(${instruction.algo}:${hashValue})`);
+        let hash;
+        switch (instruction.algo.toLowerCase()) {
+          case 'sha256':
+            hash = CryptoJS.SHA256(hashValue).toString();
+            break;
+          case 'md5':
+            hash = CryptoJS.MD5(hashValue).toString();
+            break;
+          default:
+            throw new Error(`Unsupported hash algorithm: ${instruction.algo}`);
+        }
+        this.environment.define(instruction.name, hash);
+        this.stack.push(hash);
+        break;
+      case OPCODES.HTTP:
+        const body = this.stack.pop();
+        const url = this.stack.pop();
+        let response;
+        try {
+          if (instruction.method.toLowerCase() === 'get') {
+            response = await axios.get(url, { headers: instruction.headers });
+          } else if (instruction.method.toLowerCase() === 'post') {
+            response = await axios.post(url, body, { headers: instruction.headers });
+          } else {
+            throw new Error(`Unsupported HTTP method: ${instruction.method}`);
+          }
+          this.environment.define(instruction.name, response.data);
+          this.stack.push(response.data);
+        } catch (e) {
+          throw new Error(`HTTP request failed: ${e.message}`);
+        }
+        break;
+      case OPCODES.SOCKET:
+        const message = this.stack.pop();
+        const socketUrl = this.stack.pop();
+        if (instruction.action === 'connect') {
+          const ws = new WebSocket(socketUrl);
+          ws.on('message', data => {
+            this.eventListeners.get(instruction.name)?.(data.toString());
+          });
+          ws.on('error', err => {
+            throw new Error(`WebSocket error: ${err.message}`);
+          });
+          this.sockets.set(instruction.name, ws);
+        } else if (instruction.action === 'send') {
+          const ws = this.sockets.get(instruction.name);
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(message);
+            this.stack.push(true);
+          } else {
+            throw new Error(`WebSocket ${instruction.name} not connected`);
+          }
+        } else if (instruction.action === 'close') {
+          const ws = this.sockets.get(instruction.name);
+          if (ws) {
+            ws.close();
+            this.sockets.delete(instruction.name);
+            this.stack.push(true);
+          } else {
+            throw new Error(`WebSocket ${instruction.name} not found`);
+          }
+        }
+        break;
+      case OPCODES.CRYPTO:
+        const data = this.stack.pop();
+        let result;
+        if (instruction.operation === 'encrypt') {
+          result = CryptoJS.AES.encrypt(data, instruction.key).toString();
+        } else if (instruction.operation === 'decrypt') {
+          result = CryptoJS.AES.decrypt(data, instruction.key).toString(CryptoJS.enc.Utf8);
+        } else {
+          throw new Error(`Unsupported crypto operation: ${instruction.operation}`);
+        }
+        this.environment.define(instruction.name, result);
+        this.stack.push(result);
+        break;
+      case OPCODES.ZK_PROOF:
+        const zkInput = this.stack.pop();
+        // Placeholder: Requires actual circuit and proving key
+        try {
+          const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+            zkInput,
+            instruction.circuit.wasm,
+            instruction.circuit.zkey
+          );
+          this.environment.define(instruction.name, { proof, publicSignals });
+          this.stack.push({ proof, publicSignals });
+        } catch (e) {
+          throw new Error(`ZK proof generation failed: ${e.message}`);
+        }
+        break;
+      case OPCODES.VOTE:
+        const choice = this.stack.pop();
+        this.environment.define(`vote_${instruction.proposal}_${instruction.voter}`, choice);
+        this.stack.push(true);
+        break;
+      case OPCODES.VERIFY:
+        const verifyProof = this.stack.pop();
+        // Placeholder: Requires verification key
+        try {
+          const isValid = await snarkjs.groth16.verify(
+            instruction.circuit.vkey,
+            instruction.publicSignals,
+            verifyProof
+          );
+          this.stack.push(isValid);
+        } catch (e) {
+          throw new Error(`Proof verification failed: ${e.message}`);
+        }
+        break;
+      case OPCODES.PROOF:
+        const proofInput = this.stack.pop();
+        // Placeholder: Similar to ZK_PROOF
+        try {
+          const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+            proofInput,
+            instruction.circuit.wasm,
+            instruction.circuit.zkey
+          );
+          this.environment.define(instruction.name, { proof, publicSignals });
+          this.stack.push({ proof, publicSignals });
+        } catch (e) {
+          throw new Error(`Proof generation failed: ${e.message}`);
+        }
         break;
       case OPCODES.HALT:
         this.ip = this.instructions.length;
@@ -1201,7 +1430,7 @@ class Engine {
     const prevEnv = this.environment;
     this.environment = env;
     for (const action of actions) {
-      await this.compileAction(action);
+      this.compileAction(action);
       await this.execute(this.instructions.slice(-1));
     }
     this.environment = prevEnv;
@@ -1213,5 +1442,115 @@ class Engine {
     await this.execute(instructions);
   }
 }
+
+// Update Environment class to support all types
+Environment.prototype.validateType = function(value, typeNode) {
+  const typeInfo = this.getType(typeNode.value || typeNode.name || typeNode.type);
+  switch (typeInfo.kind || typeNode.type) {
+    case 'SimpleType':
+      if (typeInfo.value === 'num' && typeof value !== 'number') {
+        throw new Error(`Expected number, got ${typeof value}`);
+      }
+      if (typeInfo.value === 'word' && typeof value !== 'string') {
+        throw new Error(`Expected string, got ${typeof value}`);
+      }
+      if (typeInfo.value === 'bool' && typeof value !== 'boolean') {
+        throw new Error(`Expected boolean, got ${typeof value}`);
+      }
+      if (typeInfo.value === 'time' && !(value instanceof Date)) {
+        throw new Error(`Expected time, got ${typeof value}`);
+      }
+      if (typeInfo.value === 'address' && !/^(0x)?[0-9a-fA-F]+$/.test(value)) {
+        throw new Error(`Expected address, got ${value}`);
+      }
+      if (typeInfo.value === 'mood' && !['happy', 'sad', 'neutral'].includes(value)) {
+        throw new Error(`Expected mood, got ${value}`);
+      }
+      if (typeInfo.value === 'any') {
+        return true;
+      }
+      break;
+    case 'ListType':
+      if (!Array.isArray(value)) {
+        throw new Error(`Expected list, got ${typeof value}`);
+      }
+      for (const item of value) {
+        this.validateType(item, typeInfo.typeRule || typeNode.typeRule);
+      }
+      break;
+    case 'DictType':
+      if (typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error(`Expected dict, got ${typeof value}`);
+      }
+      for (const key in value) {
+        this.validateType(key, typeInfo.keyType || typeNode.keyType);
+        this.validateType(value[key], typeInfo.valueType || typeNode.valueType);
+      }
+      break;
+    case 'OptionType':
+      if (value !== null && value !== undefined) {
+        this.validateType(value, typeInfo.typeRule || typeNode.typeRule);
+      }
+      break;
+    case 'BoxType':
+      if (typeof value !== 'object' || value.type !== typeInfo.name) {
+        throw new Error(`Expected box of type ${typeInfo.name}, got ${value.type || typeof value}`);
+      }
+      for (const field of typeInfo.fields) {
+        if (!(field.name in value.value) && !field.defaultValue) {
+          throw new Error(`Missing field ${field.name} in box ${typeInfo.name}`);
+        }
+        if (field.name in value.value) {
+          this.validateType(value.value[field.name], field.type);
+        }
+      }
+      break;
+    case 'GroupType':
+      if (!Array.isArray(value)) {
+        throw new Error(`Expected group, got ${typeof value}`);
+      }
+      if (value.length !== typeInfo.types.length) {
+        throw new Error(`Expected ${typeInfo.types.length} elements in group, got ${value.length}`);
+      }
+      value.forEach((item, index) => {
+        this.validateType(item, typeInfo.types[index] || typeNode.types[index]);
+      });
+      break;
+    case 'UnionType':
+      let valid = false;
+      for (const type of typeInfo.types || typeNode.types) {
+        try {
+          this.validateType(value, type);
+          valid = true;
+          break;
+        } catch (e) {
+          // Continue to next type
+        }
+      }
+      if (!valid) {
+        throw new Error(`Value ${value} does not match any type in union`);
+      }
+      break;
+    case 'FutureType':
+      if (!(value instanceof Promise)) {
+        throw new Error(`Expected future, got ${typeof value}`);
+      }
+      break;
+    case 'ErrorType':
+      if (typeof value !== 'object' || value.type !== typeInfo.name) {
+        throw new Error(`Expected error of type ${typeInfo.name}`);
+      }
+      for (const field of typeInfo.fields) {
+        if (!(field.name in value)) {
+          throw new Error(`Missing field ${field.name} in error ${typeInfo.name}`);
+        }
+        this.validateType(value[field.name], field.type);
+      }
+      break;
+    default:
+      throw new Error(`Unsupported type: ${typeInfo.kind || typeNode.type}`);
+  }
+  return true;
+};
 
 module.exports = Engine;
