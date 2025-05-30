@@ -1,0 +1,489 @@
+{
+  "program": {
+    "definition": "( namespace | pack | note )*",
+    "note": "Entry point for organizing namespaces, packs, and comments, ensuring sovereignty."
+  },
+  "namespace": {
+    "definition": "namespace name { ( pack | thing | note )* }",
+    "note": "Module-like scope for organization and access control."
+  },
+  "pack": {
+    "definition": "pack name [ tag* ] { ( thing | note )* }",
+    "note": "Packages things for cross-chain use or modular design."
+  },
+  "tag": {
+    "definition": "public | private | internal | test | async | ritual | mold",
+    "note": "Controls visibility (public/private) or execution (async/ritual)."
+  },
+  "thing": {
+    "definition": "decl",
+    "note": "All declarations use *-decl for consistency."
+  },
+  "decl": {
+    "definition": "data-decl | fn-decl | control-decl | interaction-decl | specialized-decl | utility-decl",
+    "note": "Encompasses data, functions, control, interactions, and specialized features."
+  },
+  "data-decl": {
+    "definition": "var-decl | box-decl | map-decl | queue-decl | view-decl | entity-decl",
+    "note": "Supports variables, structures, and advanced data management."
+  },
+  "fn-decl": {
+    "definition": "full-fn-decl | small-fn-decl | op-decl",
+    "note": "Includes full functions, lambdas, and custom operators."
+  },
+  "control-decl": {
+    "definition": "if-decl | loop-decl | while-decl | match-decl | return-decl | try-decl",
+    "note": "Manages execution, branching, and error recovery."
+  },
+  "interaction-decl": {
+    "definition": "share-decl | send-decl | allow-decl | bridge-decl",
+    "note": "Handles sharing, deployment, permissions, and cross-chain ops."
+  },
+  "specialized-decl": {
+    "definition": "job-decl | money-decl | promise-decl | rule-decl | test-decl | error-decl | reputation-decl | consensus-decl",
+    "note": "Powers jobs, rules, reputation, and consensus."
+  },
+  "utility-decl": {
+    "definition": "think-decl | loose-decl | target-decl | bring-decl | type-decl | format-decl | guard-decl",
+    "note": "Simplifies debugging, imports, targeting, and serialization."
+  },
+  "type": {
+    "definition": "simple-type | fancy-type | box-type | group-type | union-type | future-type | error-type | name",
+    "note": "Ensures data integrity and flexibility."
+  },
+  "simple-type": {
+    "definition": "num | word | bool | time | address | mood | any",
+    "note": "Atomic types for numbers, text, or flexible 'any'."
+  },
+  "fancy-type": {
+    "definition": "list < type-rule > | dict < type-rule , type-rule > | option < type-rule >",
+    "note": "Lists, dictionaries, or optional values."
+  },
+  "box-type": {
+    "definition": "box name",
+    "note": "Lightweight struct-like data holder."
+  },
+  "group-type": {
+    "definition": "group ( type ( , type )* )",
+    "note": "Bundles values for passing/storing."
+  },
+  "union-type": {
+    "definition": "union ( type ( | type )* )",
+    "note": "Flexible for values like 'num or word'."
+  },
+  "future-type": {
+    "definition": "future < type >",
+    "note": "Handles async results for jobs or calls."
+  },
+  "error-type": {
+    "definition": "error name",
+    "note": "References error-decl for explicit error handling."
+  },
+  "type-rule": {
+    "definition": "type ( : limit )?",
+    "note": "Constraints like 'Sortable' or 'min/max' enforce properties.",
+    "limit": {
+      "definition": "name ( , name )* | min : number | max : number | pattern : text"
+    }
+  },
+  "type-decl": {
+    "definition": "type name = type",
+    "note": "Simplifies type reuse and readability."
+  },
+  "guard-decl": {
+    "definition": "guard name ( : type ) { expr }",
+    "note": "Validates data dynamically with expressions (renamed from type-guard)."
+  },
+  "value": {
+    "definition": "number | decimal | text | yes | no | empty | hex | base64",
+    "note": "Raw inputs like numbers, text, or encoded data."
+  },
+  "number": {
+    "definition": "digit+",
+    "note": "For counts or indices."
+  },
+  "decimal": {
+    "definition": "digit+ . digit*",
+    "note": "For precise calculations."
+  },
+  "text": {
+    "definition": "\" char* \"",
+    "note": "For messages, names, or identifiers.",
+    "char": {
+      "definition": "? any character except \" ?"
+    }
+  },
+  "hex": {
+    "definition": "0x [0-9a-fA-F]+",
+    "note": "For crypto or addresses."
+  },
+  "base64": {
+    "definition": "[A-Za-z0-9+/=]+",
+    "note": "For crypto or file transfers."
+  },
+  "expr": {
+    "definition": "logic-expr",
+    "note": "Hierarchical for unambiguous parsing.",
+    "logic-expr": {
+      "definition": "compare-expr ( ( && | || ) compare-expr )*",
+      "compare-expr": {
+        "definition": "math-expr ( ( == | != | > | < | >= | <= ) math-expr )*",
+        "math-expr": {
+          "definition": "term-expr ( ( + | - ) term-expr )*",
+          "term-expr": {
+            "definition": "factor-expr ( ( * | / | % ) factor-expr )*",
+            "factor-expr": {
+              "definition": "value | name | call | dict-expr | list-expr | box-expr | group-expr | small-fn-expr | wait-expr | throw-expr | not-expr | query-expr"
+            }
+          }
+        }
+      }
+    }
+  },
+  "dict-expr": {
+    "definition": "{ ( name : expr ( , name : expr )* )? }",
+    "note": "Flexible storage for named data."
+  },
+  "list-expr": {
+    "definition": "[ ( expr ( , expr )* )? ]",
+    "note": "For sequences or collections."
+  },
+  "box-expr": {
+    "definition": "name { ( name : expr ( , name : expr )* )? }",
+    "note": "Structured data, initialized at creation."
+  },
+  "group-expr": {
+    "definition": "( expr ( , expr )* )",
+    "note": "Lightweight record for bundling."
+  },
+  "small-fn-expr": {
+    "definition": "fn [ grab ] ( ( arg ( , arg )* )? ) => expr",
+    "note": "Quick logic with variable capture.",
+    "grab": {
+      "definition": "[ ( name ( , name )* )? ]"
+    }
+  },
+  "wait-expr": {
+    "definition": "wait expr",
+    "note": "Handles async results."
+  },
+  "throw-expr": {
+    "definition": "throw error name expr",
+    "note": "Signals errors, references error-decl."
+  },
+  "not-expr": {
+    "definition": "not-op expr",
+    "note": "Unary operators for flipping values.",
+    "not-op": {
+      "definition": "- | !"
+    }
+  },
+  "call": {
+    "definition": "name ( ( expr ( , expr )* )? )",
+    "note": "Drives execution with arguments."
+  },
+  "query-expr": {
+    "definition": "recall ( text ) returns type",
+    "note": "Produces values without side effects."
+  },
+  "action": {
+    "definition": "control-action | interaction-action | utility-action",
+    "note": "Unified as *-action for consistency and reflection."
+  },
+  "control-action": {
+    "definition": "if-action | loop-action | while-action | match-action | return-action | try-action",
+    "note": "Manages execution and errors."
+  },
+  "interaction-action": {
+    "definition": "ask-action | store-action | forget-action | http-action | socket-action | subscribe-action | audit-action",
+    "note": "Handles external communication or data ops."
+  },
+  "utility-action": {
+    "definition": "say-action | check-action | set-action | set-box-action | wait-action | crypto-action",
+    "note": "For debugging, validation, or state changes."
+  },
+  "set-action": {
+    "definition": "set ( name | split ) = expr",
+    "note": "Updates state or destructures data.",
+    "split": {
+      "definition": "( name ( , name )* )"
+    }
+  },
+  "return-action": {
+    "definition": "return ( type )? expr",
+    "note": "Exits with optional typed result."
+  },
+  "check-action": {
+    "definition": "check expr , text",
+    "note": "Ensures correctness with error message."
+  },
+  "say-action": {
+    "definition": "say expr",
+    "note": "Simple logging for debugging."
+  },
+  "set-box-action": {
+    "definition": "set name : box-expr",
+    "note": "Modifies structured data."
+  },
+  "wait-action": {
+    "definition": "wait expr",
+    "note": "Syncs with async operations."
+  },
+  "try-action": {
+    "definition": "try try-block ( catch-block )? ( finally-block )?",
+    "note": "Split into sub-rules for readability.",
+    "try-block": {
+      "definition": "( action* ( on-error )? )"
+    },
+    "catch-block": {
+      "definition": "catch ( name : error name ) { action* }"
+    },
+    "finally-block": {
+      "definition": "finally { action* }"
+    }
+  },
+  "if-action": {
+    "definition": "if expr { action* ( on-error )? } ( else { action* ( on-error )? } )?",
+    "note": "Conditional execution with error handling."
+  },
+  "loop-action": {
+    "definition": "loop ( name | split ) in range { action* ( on-error )? }",
+    "note": "For-style loop for collections.",
+    "range": {
+      "definition": "expr .. expr"
+    }
+  },
+  "while-action": {
+    "definition": "while expr { action* ( on-error )? }",
+    "note": "Continues until condition fails."
+  },
+  "match-action": {
+    "definition": "match expr match-body | match expr => action",
+    "note": "Flexible control with sub-rule for clarity.",
+    "match-body": {
+      "definition": "{ match-case+ }",
+      "match-case": {
+        "definition": "pick ( name | name ( ( name ( , name )* )? ) | union-case ) => action* | else => action*",
+        "union-case": {
+          "definition": "( type : name )"
+        }
+      }
+    }
+  },
+  "var-decl": {
+    "definition": "var ( name | split ) ( : type | : infer )? = expr",
+    "note": "Flexible storage with optional typing or inference."
+  },
+  "full-fn-decl": {
+    "definition": "fn [ tag* ] name ( ( arg ( , arg )* )? ) ( : type )? { action* ( on-error )? }",
+    "note": "Core logic unit with error handling and tags.",
+    "arg": {
+      "definition": "name ( : type )?"
+    }
+  },
+  "small-fn-decl": {
+    "definition": "small-fn [ tag* ] name ( ( arg ( , arg )* )? ) ( : type )? = expr",
+    "note": "Lightweight logic with expression body."
+  },
+  "op-decl": {
+    "definition": "op custom-op [ tag* ] ( arg , arg ) ( : type )? = expr",
+    "note": "Extends math with user-defined ops.",
+    "custom-op": {
+      "definition": "name"
+    }
+  },
+  "role-decl": {
+    "definition": "role [ tag* ] name",
+    "note": "Controls access and rights."
+  },
+  "job-decl": {
+    "definition": "job [ tag* ] name { ( config-field )* action* ( on-error )? }",
+    "note": "Powers economy and async operations, flattened config.",
+    "config-field": {
+      "definition": "( when : time-expr ) | ( args : list< arg > ) | ( do : text ) | ( data : box-expr ) | ( gas : gas-expr ) | ( audit : audit-expr ) | ( life : life ) | ( check : check-expr )",
+      "time-expr": {
+        "definition": "text"
+      },
+      "gas-expr": {
+        "definition": "{ max : number , fee : text }"
+      },
+      "audit-expr": {
+        "definition": "get_audit ( text )"
+      },
+      "life": {
+        "definition": "sacred | short | forever"
+      },
+      "check-expr": {
+        "definition": "{ field : text , needed : (yes | no) , error : text }"
+      }
+    }
+  },
+  "money-decl": {
+    "definition": "money [ tag* ] { money-rule* }",
+    "note": "Ties activity to rewards, breaking fiat dependence.",
+    "money-rule": {
+      "definition": "( earn | reward ) box-expr ( when expr )? ( amount number )?"
+    }
+  },
+  "promise-decl": {
+    "definition": "promise [ tag* ] name { ( needs : role-list )? , ( binds : job-list )? , ( check : expr )? , ( enforce : action* )? }",
+    "note": "Binds roles and jobs for trust and governance.",
+    "role-list": {
+      "definition": "role-decl name ( , role-decl name )*"
+    },
+    "job-list": {
+      "definition": "job-decl name ( , job-decl name )*"
+    }
+  },
+  "reputation-decl": {
+    "definition": "reputation name { user : name , score : number }",
+    "note": "Tracks user scores for trust and governance."
+  },
+  "consensus-decl": {
+    "definition": "consensus name { threshold : number , voters : list< name > , action* }",
+    "note": "Enables decentralized decision-making."
+  },
+  "bridge-decl": {
+    "definition": "bridge name to text { action* }",
+    "note": "Facilitates interoperability with other chains."
+  },
+  "format-decl": {
+    "definition": "format name { type : ( json | cbor ) , schema : expr }",
+    "note": "Supports JSON/CBOR for data exchange."
+  },
+  "share-decl": {
+    "definition": "share name to text",
+    "note": "Controls access across systems."
+  },
+  "send-decl": {
+    "definition": "send pack name to text",
+    "note": "Facilitates cross-chain deployment."
+  },
+  "allow-decl": {
+    "definition": "allow name can ( read | write | run ) name",
+    "note": "Core for governance and access control."
+  },
+  "box-decl": {
+    "definition": "box [ tag* ] name { ( name : type ( = value | = active expr )? )* }",
+    "note": "Structured data with optional defaults."
+  },
+  "map-decl": {
+    "definition": "map [ tag* ] name { box name { ( name : text )* } }",
+    "note": "Organizes data into ontologies."
+  },
+  "entity-decl": {
+    "definition": "entity [ tag* ] name [ change* ] { ( name : type )* }",
+    "note": "Tracks state for on-chain entities.",
+    "change": {
+      "definition": "fixed | short | tracked"
+    }
+  },
+  "queue-decl": {
+    "definition": "queue [ tag* ] name",
+    "note": "Manages async events or messages."
+  },
+  "view-decl": {
+    "definition": "view [ tag* ] name { ( name : type )* ( on_event text { action* ( on-error )? } )* }",
+    "note": "Reactive data access for UIs or APIs."
+  },
+  "ask-action": {
+    "definition": "ask name ( where expr )? returns type",
+    "note": "Retrieves data with optional conditions."
+  },
+  "store-action": {
+    "definition": "store ( text , expr )",
+    "note": "Persists data with a key."
+  },
+  "forget-action": {
+    "definition": "forget ( text , reason : text )",
+    "note": "Deletes data with a reason."
+  },
+  "http-action": {
+    "definition": "http get text returns type",
+    "note": "Fetches data from external APIs."
+  },
+  "socket-action": {
+    "definition": "socket connect text on_message { action* ( on-error )? }",
+    "note": "Handles real-time communication."
+  },
+  "subscribe-action": {
+    "definition": "subscribe text on_event { action* ( on-error )? }",
+    "note": "Listens for external updates."
+  },
+  "audit-action": {
+    "definition": "audit get_audit ( text )",
+    "note": "Ensures transparency and trust."
+  },
+  "crypto-action": {
+    "definition": "hash-action | verify-action | zk-proof-action | keygen-action | multisig-action",
+    "note": "Ensures security and trust for decentralized apps.",
+    "hash-action": {
+      "definition": "set name = hash ( text , expr )"
+    },
+    "verify-action": {
+      "definition": "verify signature with expr returns bool"
+    },
+    "zk-proof-action": {
+      "definition": "check zk_proof ( text ) for job-decl name returns bool"
+    },
+    "keygen-action": {
+      "definition": "set name = keygen text returns text"
+    },
+    "multisig-action": {
+      "definition": "check multisig [ list< text > ] threshold number for job-decl name returns bool"
+    }
+  },
+  "error-decl": {
+    "definition": "error name { ( name : type )* }",
+    "note": "Must precede use in throw-expr or on-error."
+  },
+  "test-decl": {
+    "definition": "test-run [ tag* ] name { test-case* }",
+    "note": "Ensures system reliability.",
+    "test-case": {
+      "definition": "test name { action* ( expect expr == expr | expect error is error name )* ( on-error )? }"
+    }
+  },
+  "target-decl": {
+    "definition": "target text",
+    "note": "Directs execution to a chain or system."
+  },
+  "think-decl": {
+    "definition": "think name",
+    "note": "Debugging tool for state inspection."
+  },
+  "loose-decl": {
+    "definition": "loose expr",
+    "note": "Experimental actions without checks."
+  },
+  "on-error": {
+    "definition": "on_error ( name : error name )? { action* }",
+    "note": "Unified error handling, references error-decl."
+  },
+  "name": {
+    "definition": "letter ( letter | digit | _ )* - keyword",
+    "note": "Simple, readable naming convention."
+  },
+  "letter": {
+    "definition": "a..z | A..Z",
+    "note": "Restricts names to standard characters."
+  },
+  "digit": {
+    "definition": "0..9",
+    "note": "For numbers or identifiers."
+  },
+  "note": {
+    "definition": "line-note | block-note",
+    "note": "Supports documentation without affecting logic.",
+    "line-note": {
+      "definition": "// ? any character except newline ? newline"
+    },
+    "block-note": {
+      "definition": "/* ? any character sequence except \"*/\" ? */"
+    }
+  },
+  "newline": {
+    "definition": "\\n",
+    "note": "Standardizes line endings."
+  }
+}
